@@ -68,12 +68,58 @@ namespace FileProcessor.Builders
         public FileSearchConfigBuilder ScheduleAt(int hour, int minute, int second = 0)
         {
             _config.ScheduledTime = new TimeSpan(hour, minute, second);
+            _config.ScheduledTimes.Clear(); // Limpiar múltiples horarios si se usa horario único
             return this;
         }
 
         public FileSearchConfigBuilder ScheduleAt(TimeSpan time)
         {
             _config.ScheduledTime = time;
+            _config.ScheduledTimes.Clear();
+            return this;
+        }
+
+        // NUEVOS: MÚLTIPLES HORARIOS
+        public FileSearchConfigBuilder ScheduleAtTimes(params TimeSpan[] times)
+        {
+            _config.ScheduledTimes.Clear();
+            _config.ScheduledTimes.AddRange(times);
+            return this;
+        }
+
+        public FileSearchConfigBuilder ScheduleAtTimes(params (int hour, int minute)[] times)
+        {
+            _config.ScheduledTimes.Clear();
+            foreach (var (hour, minute) in times)
+            {
+                _config.ScheduledTimes.Add(new TimeSpan(hour, minute, 0));
+            }
+            return this;
+        }
+
+        public FileSearchConfigBuilder AddScheduleTime(int hour, int minute, int second = 0)
+        {
+            _config.ScheduledTimes.Add(new TimeSpan(hour, minute, second));
+            return this;
+        }
+
+        public FileSearchConfigBuilder AddScheduleTime(TimeSpan time)
+        {
+            _config.ScheduledTimes.Add(time);
+            return this;
+        }
+
+        // NUEVOS: CONFIGURACIÓN DE COMPORTAMIENTO
+        public FileSearchConfigBuilder ProcessOncePerDay(bool oncePerDay = true)
+        {
+            _config.ProcessOncePerDay = oncePerDay;
+            return this;
+        }
+
+        public FileSearchConfigBuilder ProcessOnAllSchedules(bool onAllSchedules = true)
+        {
+            _config.ProcessOnAllSchedules = onAllSchedules;
+            _config.ProcessOncePerDay = !onAllSchedules; // Son mutuamente exclusivos
             return this;
         }
 
@@ -165,6 +211,21 @@ namespace FileProcessor.Builders
         {
             // Validar configuración antes de construir
             var errors = Utils.ValidationHelper.ValidateFileSearchConfig(_config);
+
+            // Validar configuración de horarios
+            if (_config.ScheduledTimes.Any() && _config.ScheduledTimes.Count > 1)
+            {
+                // Verificar que no haya horarios duplicados
+                var duplicates = _config.ScheduledTimes.GroupBy(t => t).Where(g => g.Count() > 1);
+                if (duplicates.Any())
+                {
+                    errors.Add("Se encontraron horarios duplicados en ScheduledTimes");
+                }
+
+                // Ordenar los horarios automáticamente
+                _config.ScheduledTimes = _config.ScheduledTimes.OrderBy(t => t).ToList();
+            }
+
             if (errors.Any())
             {
                 throw new Exceptions.ConfigurationException($"Configuración inválida: {string.Join(", ", errors)}");
