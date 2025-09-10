@@ -4,6 +4,15 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>FileProcessor</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Joselito Beriguete</Authors>
+    <Company>JBN Code</Company>
+    <Product>FileProcessor</Product>
+    <Description>Librería liviana para procesamiento automático de archivos sin dependencias de Excel</Description>
+    <PackageTags>files;scheduling;automation;excel;processing</PackageTags>
+    <RepositoryUrl>https://github.com/joselito06/FileProcessor</RepositoryUrl>
   </PropertyGroup>
 
 </Project>
