@@ -25,8 +25,9 @@ internal class Program
             //.AddSearchPath(@"C:\Reports")
             .AddFileNames("Prueba1.xlsx")
             //.AddFilePatterns("*.xlsx", "*.xls")
-            .ScheduleAt(23, 33) // 9:00 AM
-            .RetryEvery(1) // 15 minutos
+            .ScheduleAt(00, 26) // 9:00 AM
+            .ScheduleAt(00, 27)
+            .RetryEvery(2) // 15 minutos
             //.SearchUntilFound()
             .OnlyFilesNewerThan(7) // Solo archivos de los últimos 7 días
             .MaxFileSizeMB(50) // Máximo 50MB

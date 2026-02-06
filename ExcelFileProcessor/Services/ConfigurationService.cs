@@ -85,7 +85,11 @@ namespace FileProcessor.Services
             {
                 if (File.Exists(_configPath))
                 {
+#if NET472 || NET48
                     var json = File.ReadAllText(_configPath);
+#else
+                    var json = File.ReadAllText(_configPath);
+#endif
                     var settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
                     if (settings != null)
                     {
@@ -110,7 +114,11 @@ namespace FileProcessor.Services
                 {
                     WriteIndented = true
                 });
+#if NET472 || NET48
                 File.WriteAllText(_configPath, json);
+#else
+                File.WriteAllText(_configPath, json);
+#endif
             }
             catch
             {

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using FileInfo = ExcelFileProcessor.Core.Models.FileInfo;
 
@@ -87,20 +88,31 @@ namespace FileProcessor.Factory
                             UseShellExecute = false,
                             CreateNoWindow = true
                         };
-
-                        using var process = Process.Start(processInfo);
-                        var output = await process.StandardOutput.ReadToEndAsync();
-                        var error = await process.StandardError.ReadToEndAsync();
-                        await process.WaitForExitAsync();
-
-                        results.Add(new
+                        using (var process = Process.Start(processInfo))
                         {
-                            FileName = file.FileName,
-                            ExitCode = process.ExitCode,
-                            Output = output,
-                            Error = error,
-                            Success = process.ExitCode == 0
-                        });
+#if NET472 || NET48
+                            var outputTask = Task.Run(() => process.StandardOutput.ReadToEnd());
+                            var errorTask = Task.Run(() => process.StandardError.ReadToEnd());
+                            process.WaitForExit();
+                            var output = await outputTask;
+                            var error = await errorTask;
+#else
+                            var output = await process.StandardOutput.ReadToEndAsync();
+                            var error = await process.StandardError.ReadToEndAsync();
+                            await process.WaitForExitAsync();
+#endif
+
+
+
+                            results.Add(new
+                            {
+                                FileName = file.FileName,
+                                ExitCode = process.ExitCode,
+                                Output = output,
+                                Error = error,
+                                Success = process.ExitCode == 0
+                            });
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -170,6 +182,53 @@ namespace FileProcessor.Factory
         }
 
         /// <summary>
+        /// Método auxiliar para obtener ruta relativa compatible con .NET Framework
+        /// </summary>
+        private static string GetRelativePath(string fromPath, string toPath)
+        {
+#if NET472 || NET48
+            // Implementación manual para .NET Framework
+            if (string.IsNullOrEmpty(fromPath)) throw new ArgumentNullException(nameof(fromPath));
+            if (string.IsNullOrEmpty(toPath)) throw new ArgumentNullException(nameof(toPath));
+
+            Uri fromUri = new Uri(AppendDirectorySeparatorChar(fromPath));
+            Uri toUri = new Uri(AppendDirectorySeparatorChar(toPath));
+
+            if (fromUri.Scheme != toUri.Scheme)
+            {
+                return toPath;
+            }
+
+            Uri relativeUri = fromUri.MakeRelativeUri(toUri);
+            string relativePath = Uri.UnescapeDataString(relativeUri.ToString());
+
+            if (string.Equals(toUri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                relativePath = relativePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            }
+
+            return relativePath;
+#else
+            return Path.GetRelativePath(fromPath, toPath);
+#endif
+        }
+
+#if NET472 || NET48
+        private static string AppendDirectorySeparatorChar(string path)
+        {
+            // Append a slash only if the path is a directory and does not have a slash.
+            if (!Path.HasExtension(path) &&
+                !path.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                return path + Path.DirectorySeparatorChar;
+            }
+
+            return path;
+        }
+#endif
+
+        
+        /// <summary>
         /// Crea un delegado que copia archivos a otra ubicación
         /// </summary>
         public static ProcessFilesDelegate CreateFileCopier(string destinationPath, bool preserveStructure = false)
@@ -189,7 +248,7 @@ namespace FileProcessor.Factory
                         if (preserveStructure)
                         {
                             // Preservar estructura de directorios
-                            var relativePath = Path.GetRelativePath(Path.GetPathRoot(file.FullPath), file.FullPath);
+                            var relativePath = GetRelativePath(Path.GetPathRoot(file.FullPath), file.FullPath);
                             destFile = Path.Combine(destinationPath, relativePath);
                             Directory.CreateDirectory(Path.GetDirectoryName(destFile));
                         }
@@ -261,8 +320,11 @@ namespace FileProcessor.Factory
 
                     var reportFile = Path.Combine(reportPath, $"FileReport_{DateTime.Now:yyyyMMdd_HHmmss}.json");
                     Directory.CreateDirectory(reportPath);
+#if NET472 || NET48
+                    File.WriteAllText(reportFile, reportJson);
+#else
                     await File.WriteAllTextAsync(reportFile, reportJson);
-
+#endif
                     Console.WriteLine($"📊 Reporte generado: {reportFile}");
                 }
 
