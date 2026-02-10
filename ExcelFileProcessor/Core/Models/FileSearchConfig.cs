@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FileProcessor.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,8 +22,18 @@ namespace ExcelFileProcessor.Core.Models
         public List<string> ExcludePatterns { get; set; } = new List<string> { "~$*", "temp_*" }; // Excluir archivos temporales
         public long? MaxFileSizeBytes { get; set; } // Límite de tamaño de archivo
         public TimeSpan? FileAge { get; set; } // Solo archivos más nuevos que X tiempo
+
         // NUEVO: Configuración de comportamiento para múltiples horarios
         public bool ProcessOncePerDay { get; set; } = true; // Si true, procesa solo una vez por día independientemente del horario
         public bool ProcessOnAllSchedules { get; set; } = false; // Si true, procesa en TODOS los horarios programados
+
+        // NUEVO: Configuración para búsqueda basada en fechas
+        public bool EnableDateBasedSearch { get; set; } = false;
+        public DateBasedPathResolver.DateFolderFormat? DateFolderFormat { get; set; }
+        public DateTime? TargetSearchDate { get; set; } // null = fecha actual
+
+        // NUEVO: Configuración para ejecución manual/por señal
+        public bool EnableManualExecution { get; set; } = false;
+        public bool AllowMultipleManualExecutions { get; set; } = true; // Permitir múltiples ejecuciones manuales sin restricción de "una vez por día"
     }
 }

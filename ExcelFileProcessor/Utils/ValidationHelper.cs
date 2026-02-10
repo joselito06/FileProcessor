@@ -29,13 +29,44 @@ namespace FileProcessor.Utils
             {
                 foreach (var path in config.SearchPaths)
                 {
-                    if (!PathHelper.IsValidPath(path))
+                    // Verificar si la ruta contiene tokens de fecha
+                    bool hasDateToken = path.Contains("{date:");
+
+                    // Si tiene búsqueda basada en fechas habilitada o tokens de fecha, ser más permisivo
+                    if (config.EnableDateBasedSearch || hasDateToken)
                     {
-                        errors.Add($"Ruta inválida: {path}");
+                        // Extraer la ruta base para validación
+                        var basePath = path;
+                        if (hasDateToken)
+                        {
+                            var tokenStart = path.IndexOf("{date:");
+                            if (tokenStart > 0)
+                            {
+                                basePath = path.Substring(0, tokenStart).TrimEnd('\\', '/');
+                            }
+                        }
+
+                        // Validar solo que la ruta base tenga formato válido
+                        if (!string.IsNullOrWhiteSpace(basePath))
+                        {
+                            if (!PathHelper.IsValidPath(basePath))
+                            {
+                                errors.Add($"Ruta base inválida: {basePath}");
+                            }
+                            // NO validar que exista - se expandirá dinámicamente con fechas
+                        }
                     }
-                    else if (!Directory.Exists(path))
+                    else
                     {
-                        errors.Add($"La ruta no existe: {path}");
+                        // Validación normal para rutas estáticas
+                        if (!PathHelper.IsValidPath(path))
+                        {
+                            errors.Add($"Ruta inválida: {path}");
+                        }
+                        else if (!Directory.Exists(path))
+                        {
+                            errors.Add($"La ruta no existe: {path}");
+                        }
                     }
                 }
             }

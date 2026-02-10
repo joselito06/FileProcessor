@@ -1,4 +1,5 @@
 ﻿using ExcelFileProcessor.Core.Models;
+using FileProcessor.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +26,37 @@ namespace FileProcessor.Builders
             foreach (var path in paths)
             {
                 AddSearchPath(path);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Agrega una ruta con búsqueda automática de carpetas por fecha
+        /// </summary>
+        public FileSearchConfigBuilder AddDateBasedSearchPath(
+            string basePath,
+            DateBasedPathResolver.DateFolderFormat format,
+            DateTime? targetDate = null)
+        {
+            if (!string.IsNullOrWhiteSpace(basePath))
+            {
+                _config.SearchPaths.Add(basePath);
+                _config.EnableDateBasedSearch = true;
+                _config.DateFolderFormat = format;
+                _config.TargetSearchDate = targetDate;
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Agrega una ruta con token de fecha que se expandirá automáticamente
+        /// Ejemplo: "C:\Data\{date:dd-MM-yyyy}" se expande a "C:\Data\09-02-2026"
+        /// </summary>
+        public FileSearchConfigBuilder AddSearchPathWithDateToken(string pathWithToken)
+        {
+            if (!string.IsNullOrWhiteSpace(pathWithToken))
+            {
+                _config.SearchPaths.Add(pathWithToken);
             }
             return this;
         }
@@ -123,6 +155,25 @@ namespace FileProcessor.Builders
             return this;
         }
 
+        /// <summary>
+        /// Habilita la ejecución manual/por señal
+        /// </summary>
+        public FileSearchConfigBuilder EnableManualExecution(bool allowMultiple = true)
+        {
+            _config.EnableManualExecution = true;
+            _config.AllowMultipleManualExecutions = allowMultiple;
+            return this;
+        }
+
+        /// <summary>
+        /// Deshabilita la ejecución manual/por señal
+        /// </summary>
+        public FileSearchConfigBuilder DisableManualExecution()
+        {
+            _config.EnableManualExecution = false;
+            return this;
+        }
+
         public FileSearchConfigBuilder RetryEvery(TimeSpan interval)
         {
             _config.RetryInterval = interval;
@@ -210,7 +261,7 @@ namespace FileProcessor.Builders
         public FileSearchConfig Build()
         {
             // Validar configuración antes de construir
-            var errors = Utils.ValidationHelper.ValidateFileSearchConfig(_config);
+            var errors = ValidationHelper.ValidateFileSearchConfig(_config);
 
             // Validar configuración de horarios
             if (_config.ScheduledTimes.Any() && _config.ScheduledTimes.Count > 1)
